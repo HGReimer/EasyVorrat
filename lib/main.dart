@@ -96,46 +96,108 @@ class _AreaButton extends StatelessWidget {
   }
 }
 
-class LocationScreen extends StatelessWidget {
+class LocationScreen extends StatefulWidget {
   final String locationName;
 
   const LocationScreen({super.key, required this.locationName});
 
-  void _showAddItemDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Artikel hinzufügen'),
-        content: const TextField(
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: 'Artikelname',
-            hintText: 'z. B. Milch',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hinzufügen'),
-          ),
-        ],
-      ),
+  @override
+  State<LocationScreen> createState() => _LocationScreenState();
+}
+
+class _LocationScreenState extends State<LocationScreen> {
+  final List<String> items = [];
+
+  Future<void> _openAddItemScreen() async {
+    final name = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddItemScreen()),
     );
+
+    if (!mounted || name == null || name.trim().isEmpty) {
+      return;
+    }
+
+    setState(() {
+      items.add(name.trim());
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(locationName)),
-      body: Center(
-        child: FilledButton.icon(
-          onPressed: () => _showAddItemDialog(context),
-          icon: const Icon(Icons.add),
-          label: const Text('Artikel hinzufügen'),
+      appBar: AppBar(title: Text(widget.locationName)),
+      body: items.isEmpty
+          ? const Center(child: Text('Noch keine Artikel vorhanden.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.inventory_2_outlined),
+                    title: Text(items[index]),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddItemScreen,
+        icon: const Icon(Icons.add),
+        label: const Text('Artikel hinzufügen'),
+      ),
+    );
+  }
+}
+
+class AddItemScreen extends StatefulWidget {
+  const AddItemScreen({super.key});
+
+  @override
+  State<AddItemScreen> createState() => _AddItemScreenState();
+}
+
+class _AddItemScreenState extends State<AddItemScreen> {
+  final TextEditingController controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = controller.text.trim();
+
+    if (name.isNotEmpty) {
+      Navigator.pop(context, name);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Artikel hinzufügen')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Artikelname',
+                hintText: 'z. B. Milch',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.add),
+              label: const Text('Hinzufügen'),
+            ),
+          ],
         ),
       ),
     );
