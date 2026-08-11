@@ -137,6 +137,15 @@ class _LocationScreenState extends State<LocationScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.inventory_2_outlined),
                     title: Text(items[index]),
+                    trailing: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          items.removeAt(index);
+                        });
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Artikel entfernen',
+                    ),
                   ),
                 );
               },
