@@ -167,20 +167,32 @@ class AddItemScreen extends StatefulWidget {
 }
 
 class _AddItemScreenState extends State<AddItemScreen> {
-  final TextEditingController controller = TextEditingController();
+  final nameController = TextEditingController();
+  final quantityController = TextEditingController();
+  final unitController = TextEditingController();
 
   @override
   void dispose() {
-    controller.dispose();
+    nameController.dispose();
+    quantityController.dispose();
+    unitController.dispose();
     super.dispose();
   }
 
   void _save() {
-    final name = controller.text.trim();
+    final name = nameController.text.trim();
+    final quantity = quantityController.text.trim();
+    final unit = unitController.text.trim();
 
-    if (name.isNotEmpty) {
-      Navigator.pop(context, name);
-    }
+    if (name.isEmpty) return;
+
+    final amount = [
+      quantity,
+      unit,
+    ].where((value) => value.isNotEmpty).join(' ');
+
+    final item = amount.isEmpty ? name : '$amount $name';
+    Navigator.pop(context, item);
   }
 
   @override
@@ -192,10 +204,28 @@ class _AddItemScreenState extends State<AddItemScreen> {
         child: Column(
           children: [
             TextField(
-              controller: controller,
+              controller: nameController,
               decoration: const InputDecoration(
                 labelText: 'Artikelname',
                 hintText: 'z. B. Milch',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: quantityController,
+              decoration: const InputDecoration(
+                labelText: 'Menge',
+                hintText: 'z. B. 2 × 1',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: unitController,
+              decoration: const InputDecoration(
+                labelText: 'Einheit',
+                hintText: 'z. B. l, kg, Stück',
                 border: OutlineInputBorder(),
               ),
               onSubmitted: (_) => _save(),
