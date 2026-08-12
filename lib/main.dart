@@ -96,6 +96,20 @@ class _AreaButton extends StatelessWidget {
   }
 }
 
+class InventoryItem {
+  final String name;
+  final String quantity;
+  final String unit;
+  final DateTime? expiryDate;
+
+  const InventoryItem({
+    required this.name,
+    this.quantity = '',
+    this.unit = '',
+    this.expiryDate,
+  });
+}
+
 class LocationScreen extends StatefulWidget {
   final String locationName;
 
@@ -106,20 +120,20 @@ class LocationScreen extends StatefulWidget {
 }
 
 class _LocationScreenState extends State<LocationScreen> {
-  final List<String> items = [];
+  final List<InventoryItem> items = [];
 
   Future<void> _openAddItemScreen() async {
-    final name = await Navigator.push<String>(
+    final item = await Navigator.push<InventoryItem>(
       context,
       MaterialPageRoute(builder: (_) => const AddItemScreen()),
     );
 
-    if (!mounted || name == null || name.trim().isEmpty) {
+    if (!mounted || item == null) {
       return;
     }
 
     setState(() {
-      items.add(name.trim());
+      items.add(item);
     });
   }
 
@@ -136,7 +150,13 @@ class _LocationScreenState extends State<LocationScreen> {
                 return Card(
                   child: ListTile(
                     leading: const Icon(Icons.inventory_2_outlined),
-                    title: Text(items[index]),
+                    title: Text(items[index].name),
+                    subtitle: Text(
+                      [
+                        items[index].quantity,
+                        items[index].unit,
+                      ].where((value) => value.isNotEmpty).join(' '),
+                    ),
                     trailing: IconButton(
                       onPressed: () {
                         setState(() {
@@ -186,13 +206,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
     if (name.isEmpty) return;
 
-    final amount = [
-      quantity,
-      unit,
-    ].where((value) => value.isNotEmpty).join(' ');
-
-    final item = amount.isEmpty ? name : '$amount $name';
-    Navigator.pop(context, item);
+    Navigator.pop(
+      context,
+      InventoryItem(name: name, quantity: quantity, unit: unit),
+    );
   }
 
   @override
