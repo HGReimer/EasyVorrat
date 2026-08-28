@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const EasyVorratApp());
 
     expect(find.text('EasyVorrat'), findsOneWidget);
-    expect(find.text('Kollektiv-Bestand'), findsOneWidget);
+    expect(find.text('Bestand'), findsOneWidget);
     expect(find.text('Kühlschrank'), findsOneWidget);
     expect(find.text('Speisekammer'), findsOneWidget);
     expect(find.text('Keller'), findsOneWidget);

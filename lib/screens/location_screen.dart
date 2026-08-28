@@ -24,8 +24,9 @@ class _LocationScreenState extends State<LocationScreen> {
   }
 
   Future<void> _loadItems() async {
-    final loaded =
-        await DatabaseHelper.instance.getItemsForLocation(widget.locationName);
+    final loaded = await DatabaseHelper.instance.getItemsForLocation(
+      widget.locationName,
+    );
     if (!mounted) return;
     setState(() {
       items = loaded;
@@ -61,46 +62,45 @@ class _LocationScreenState extends State<LocationScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : items.isEmpty
-              ? const Center(child: Text('Noch keine Artikel vorhanden.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final expiry = item.expiryDate;
-                    final daysLeft = expiry == null
-                        ? null
-                        : expiry.difference(DateTime.now()).inDays;
-                    final isExpiringSoon = daysLeft != null && daysLeft <= 3;
+          ? const Center(child: Text('Noch keine Artikel vorhanden.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final expiry = item.expiryDate;
+                final daysLeft = expiry?.difference(DateTime.now()).inDays;
+                final isExpiringSoon = daysLeft != null && daysLeft <= 3;
 
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(
-                          Icons.inventory_2_outlined,
-                          color: isExpiringSoon ? Colors.orangeAccent : null,
-                        ),
-                        title: Text(item.name),
-                        subtitle: Text(
-                          [
-                            [item.quantity, item.unit]
-                                .where((v) => v.isNotEmpty)
-                                .join(' '),
-                            if (expiry != null)
-                              'MHD: ${expiry.day.toString().padLeft(2, '0')}.'
-                                  '${expiry.month.toString().padLeft(2, '0')}.'
-                                  '${expiry.year}'
-                                  '${isExpiringSoon ? ' ⚠️' : ''}',
-                          ].where((v) => v.isNotEmpty).join(' · '),
-                        ),
-                        trailing: IconButton(
-                          onPressed: () => _deleteItem(item),
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Artikel entfernen',
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                return Card(
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.inventory_2_outlined,
+                      color: isExpiringSoon ? Colors.orangeAccent : null,
+                    ),
+                    title: Text(item.name),
+                    subtitle: Text(
+                      [
+                        [
+                          item.quantity,
+                          item.unit,
+                        ].where((v) => v.isNotEmpty).join(' '),
+                        if (expiry != null)
+                          'MHD: ${expiry.day.toString().padLeft(2, '0')}.'
+                              '${expiry.month.toString().padLeft(2, '0')}.'
+                              '${expiry.year}'
+                              '${isExpiringSoon ? ' ⚠️' : ''}',
+                      ].where((v) => v.isNotEmpty).join(' · '),
+                    ),
+                    trailing: IconButton(
+                      onPressed: () => _deleteItem(item),
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Artikel entfernen',
+                    ),
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddItemScreen,
         icon: const Icon(Icons.add),
