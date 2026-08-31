@@ -6,6 +6,7 @@ import '../theme/easy_vorrat_theme.dart';
 import '../widgets/easy_vorrat_widgets.dart';
 import 'add_item_screen.dart';
 import 'location_screen.dart';
+import 'shopping_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   int _totalItems = 0;
   int _expiringItems = 0;
+  int _shoppingItems = 0;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadDashboard() async {
     final locations = await DatabaseHelper.instance.getLocations();
     final overview = await DatabaseHelper.instance.getInventoryOverview();
+    final shoppingItems = await DatabaseHelper.instance.getShoppingListItems();
 
     if (!mounted) {
       return;
@@ -38,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _locations = locations;
       _totalItems = overview['total'] ?? 0;
       _expiringItems = overview['expiring'] ?? 0;
+      _shoppingItems = shoppingItems.length;
       _isLoading = false;
     });
   }
@@ -76,10 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Abbrechen'),
             ),
-            FilledButton(
-              onPressed: submit,
-              child: const Text('Speichern'),
-            ),
+            FilledButton(onPressed: submit, child: const Text('Speichern')),
           ],
         );
       },
@@ -90,10 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return result;
   }
 
-  bool _locationNameExists(
-    String name, {
-    int? exceptId,
-  }) {
+  bool _locationNameExists(String name, {int? exceptId}) {
     final normalizedName = name.trim().toLowerCase();
 
     return _locations.any(
@@ -106,60 +104,40 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _addLocation() async {
-    final name = await _showLocationDialog(
-      title: 'Lagerort hinzufügen',
-    );
+    final name = await _showLocationDialog(title: 'Lagerort hinzufügen');
 
     if (!mounted || name == null) {
       return;
     }
 
     if (_locationNameExists(name)) {
-      _showMessage(
-        'Dieser Lagerort ist bereits vorhanden.',
-      );
+      _showMessage('Dieser Lagerort ist bereits vorhanden.');
       return;
     }
 
     await DatabaseHelper.instance.insertLocation(
-      StorageLocation(
-        name: name,
-        iconName: 'storage',
-      ),
+      StorageLocation(name: name, iconName: 'storage'),
     );
 
     await _loadDashboard();
   }
 
-  Future<void> _renameLocation(
-    StorageLocation location,
-  ) async {
+  Future<void> _renameLocation(StorageLocation location) async {
     final newName = await _showLocationDialog(
       title: 'Lagerort umbenennen',
       initialName: location.name,
     );
 
-    if (!mounted ||
-        newName == null ||
-        newName == location.name) {
+    if (!mounted || newName == null || newName == location.name) {
       return;
     }
 
-    if (_locationNameExists(
-      newName,
-      exceptId: location.id,
-    )) {
-      _showMessage(
-        'Dieser Lagerort ist bereits vorhanden.',
-      );
+    if (_locationNameExists(newName, exceptId: location.id)) {
+      _showMessage('Dieser Lagerort ist bereits vorhanden.');
       return;
     }
 
@@ -171,41 +149,27 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadDashboard();
   }
 
-  Future<bool> _confirmDelete(
-    StorageLocation location,
-  ) async {
+  Future<bool> _confirmDelete(StorageLocation location) async {
     return await showDialog<bool>(
           context: context,
           builder: (dialogContext) {
             return AlertDialog(
-              title: const Text(
-                'Lagerort entfernen?',
-              ),
+              title: const Text('Lagerort entfernen?'),
               content: Text(
                 'Soll „${location.name}“ wirklich entfernt werden?',
               ),
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(
-                      dialogContext,
-                      false,
-                    );
+                    Navigator.pop(dialogContext, false);
                   },
-                  child: const Text(
-                    'Abbrechen',
-                  ),
+                  child: const Text('Abbrechen'),
                 ),
                 FilledButton(
                   onPressed: () {
-                    Navigator.pop(
-                      dialogContext,
-                      true,
-                    );
+                    Navigator.pop(dialogContext, true);
                   },
-                  child: const Text(
-                    'Entfernen',
-                  ),
+                  child: const Text('Entfernen'),
                 ),
               ],
             );
@@ -214,19 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
         false;
   }
 
-  Future<void> _deleteLocation(
-    StorageLocation location,
-  ) async {
-    final confirmed = await _confirmDelete(
-      location,
-    );
+  Future<void> _deleteLocation(StorageLocation location) async {
+    final confirmed = await _confirmDelete(location);
 
     if (!mounted || !confirmed) {
       return;
     }
 
-    final deleted =
-        await DatabaseHelper.instance.deleteLocationIfEmpty(
+    final deleted = await DatabaseHelper.instance.deleteLocationIfEmpty(
       location,
     );
 
@@ -244,15 +203,11 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadDashboard();
   }
 
-  Future<void> _openLocation(
-    StorageLocation location,
-  ) async {
+  Future<void> _openLocation(StorageLocation location) async {
     await Navigator.push<void>(
       context,
       MaterialPageRoute(
-        builder: (_) => LocationScreen(
-          locationName: location.name,
-        ),
+        builder: (_) => LocationScreen(locationName: location.name),
       ),
     );
 
@@ -263,9 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _addItem() async {
     if (_locations.isEmpty) {
-      _showMessage(
-        'Bitte zuerst einen Lagerort anlegen.',
-      );
+      _showMessage('Bitte zuerst einen Lagerort anlegen.');
       return;
     }
 
@@ -279,26 +232,15 @@ class _HomeScreenState extends State<HomeScreen> {
               const ListTile(
                 title: Text(
                   'Lagerort auswählen',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               for (final location in _locations)
                 ListTile(
-                  leading: Icon(
-                    _locationIcon(
-                      location.iconName,
-                    ),
-                  ),
-                  title: Text(
-                    location.name,
-                  ),
+                  leading: Icon(_locationIcon(location.iconName)),
+                  title: Text(location.name),
                   onTap: () {
-                    Navigator.pop(
-                      sheetContext,
-                      location,
-                    );
+                    Navigator.pop(sheetContext, location);
                   },
                 ),
             ],
@@ -314,9 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AddItemScreen(
-          locationName: location.name,
-        ),
+        builder: (_) => AddItemScreen(locationName: location.name),
       ),
     );
 
@@ -325,9 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  static IconData _locationIcon(
-    String iconName,
-  ) {
+  static IconData _locationIcon(String iconName) {
     return switch (iconName) {
       'kitchen' => Icons.kitchen,
       'shelves' => Icons.shelves,
@@ -340,64 +278,40 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'EasyVorrat',
-        ),
-      ),
+      appBar: AppBar(title: const Text('EasyVorrat')),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadDashboard,
               child: ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  24,
-                  24,
-                  24,
-                  110,
-                ),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
                 children: [
-                  const SizedBox(
-                    height: 8,
-                  ),
+                  const SizedBox(height: 8),
                   const Icon(
                     Icons.inventory_2_outlined,
                     size: 72,
                     color: EasyVorratColors.green,
                   ),
-                  const SizedBox(
-                    height: 14,
-                  ),
+                  const SizedBox(height: 14),
                   Text(
                     'EasyVorrat',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(
-                          fontSize: 30,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(fontSize: 30),
                   ),
-                  const SizedBox(
-                    height: 28,
-                  ),
+                  const SizedBox(height: 28),
                   Row(
                     children: [
                       Expanded(
                         child: _StatusCard(
                           value: '$_totalItems',
                           label: 'Artikel',
-                          icon:
-                              Icons.inventory_2_outlined,
+                          icon: Icons.inventory_2_outlined,
                         ),
                       ),
-                      const SizedBox(
-                        width: 12,
-                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: _StatusCard(
                           value: '$_expiringItems',
@@ -405,35 +319,38 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: Icons.schedule,
                         ),
                       ),
-                      const SizedBox(
-                        width: 12,
-                      ),
-                      const Expanded(
+                      const SizedBox(width: 12),
+                      Expanded(
                         child: _StatusCard(
-                          value: '0',
+                          value: '$_shoppingItems',
                           label: 'Einkaufsliste',
-                          icon: Icons
-                              .shopping_cart_outlined,
+                          icon: Icons.shopping_cart_outlined,
+                          onTap: () async {
+                            await Navigator.push<void>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ShoppingListScreen(),
+                              ),
+                            );
+
+                            if (mounted) {
+                              await _loadDashboard();
+                            }
+                          },
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(
-                    height: 32,
-                  ),
+                  const SizedBox(height: 32),
                   const EasyVorratSectionHeader(
                     title: 'Lagerorte',
                     icon: Icons.storage_outlined,
                   ),
-                  const SizedBox(
-                    height: 8,
-                  ),
+                  const SizedBox(height: 8),
                   if (_locations.isEmpty)
                     const EasyVorratPanel(
                       child: Padding(
-                        padding: EdgeInsets.all(
-                          12,
-                        ),
+                        padding: EdgeInsets.all(12),
                         child: Text(
                           'Noch keine Lagerorte vorhanden.',
                           textAlign: TextAlign.center,
@@ -444,47 +361,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      alignment:
-                          WrapAlignment.center,
+                      alignment: WrapAlignment.center,
                       children: [
-                        for (final location
-                            in _locations)
+                        for (final location in _locations)
                           _LocationCard(
                             location: location,
                             onOpen: () {
-                              _openLocation(
-                                location,
-                              );
+                              _openLocation(location);
                             },
                             onRename: () {
-                              _renameLocation(
-                                location,
-                              );
+                              _renameLocation(location);
                             },
                             onDelete: () {
-                              _deleteLocation(
-                                location,
-                              );
+                              _deleteLocation(location);
                             },
                           ),
                       ],
                     ),
-                  const SizedBox(
-                    height: 32,
-                  ),
+                  const SizedBox(height: 32),
                   SizedBox(
                     height: 52,
                     child: ElevatedButton.icon(
                       onPressed: _addItem,
-                      icon: const Icon(
-                        Icons.add,
-                      ),
+                      icon: const Icon(Icons.add),
                       label: const Text(
                         'Artikel hinzufügen',
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -492,15 +396,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-      floatingActionButton:
-          FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _addLocation,
-        icon: const Icon(
-          Icons.add_location_alt_outlined,
-        ),
-        label: const Text(
-          'Lagerort hinzufügen',
-        ),
+        icon: const Icon(Icons.add_location_alt_outlined),
+        label: const Text('Lagerort hinzufügen'),
       ),
     );
   }
@@ -510,52 +409,45 @@ class _StatusCard extends StatelessWidget {
   final String value;
   final String label;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const _StatusCard({
     required this.value,
     required this.label,
     required this.icon,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return EasyVorratPanel(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 16,
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: EasyVorratColors.green,
-            size: 22,
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color:
-                  EasyVorratColors.textPrimary,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: EasyVorratPanel(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        child: Column(
+          children: [
+            Icon(icon, color: EasyVorratColors.green, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: EasyVorratColors.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(
-            height: 2,
-          ),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              color:
-                  EasyVorratColors.textSecondary,
+            const SizedBox(height: 2),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: EasyVorratColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -596,30 +488,19 @@ class _LocationCard extends StatelessWidget {
               child: InkWell(
                 onTap: onOpen,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 18,
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        _icon,
-                        color:
-                            EasyVorratColors.green,
-                      ),
-                      const SizedBox(
-                        width: 12,
-                      ),
+                      Icon(_icon, color: EasyVorratColors.green),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           location.name,
-                          overflow:
-                              TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight:
-                                FontWeight.w600,
-                          ),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -639,23 +520,17 @@ class _LocationCard extends StatelessWidget {
               },
               itemBuilder: (context) => const [
                 PopupMenuItem(
-                  value:
-                      _LocationAction.rename,
+                  value: _LocationAction.rename,
                   child: ListTile(
-                    leading:
-                        Icon(Icons.edit_outlined),
-                    title:
-                        Text('Umbenennen'),
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('Umbenennen'),
                   ),
                 ),
                 PopupMenuItem(
-                  value:
-                      _LocationAction.delete,
+                  value: _LocationAction.delete,
                   child: ListTile(
-                    leading:
-                        Icon(Icons.delete_outline),
-                    title:
-                        Text('Entfernen'),
+                    leading: Icon(Icons.delete_outline),
+                    title: Text('Entfernen'),
                   ),
                 ),
               ],
@@ -667,7 +542,4 @@ class _LocationCard extends StatelessWidget {
   }
 }
 
-enum _LocationAction {
-  rename,
-  delete,
-}
+enum _LocationAction { rename, delete }

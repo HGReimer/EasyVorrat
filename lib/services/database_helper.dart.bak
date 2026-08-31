@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 3,
       onCreate: (db, version) async {
         await _createItemsTable(db);
         await _createLocationsTable(db);
@@ -52,17 +52,6 @@ class DatabaseHelper {
             'INTEGER NOT NULL DEFAULT 0',
           );
         }
-
-        if (oldVersion < 4) {
-          await db.execute(
-            'ALTER TABLE items ADD COLUMN shoppingQuantity TEXT',
-          );
-          await db.execute('ALTER TABLE items ADD COLUMN defaultLocation TEXT');
-          await db.execute(
-            'UPDATE items SET defaultLocation = location '
-            'WHERE defaultLocation IS NULL',
-          );
-        }
       },
     );
   }
@@ -77,10 +66,8 @@ class DatabaseHelper {
         location TEXT NOT NULL,
         expiryDate INTEGER,
         minimumQuantity TEXT,
-        shoppingQuantity TEXT,
         autoShoppingList INTEGER NOT NULL DEFAULT 0,
-        isOnShoppingList INTEGER NOT NULL DEFAULT 0,
-        defaultLocation TEXT
+        isOnShoppingList INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -225,19 +212,6 @@ class DatabaseHelper {
     return maps.map(InventoryItem.fromMap).toList();
   }
 
-  Future<List<InventoryItem>> getShoppingListItems() async {
-    final db = await database;
-
-    final maps = await db.query(
-      'items',
-      where: 'isOnShoppingList = ?',
-      whereArgs: [1],
-      orderBy: 'name COLLATE NOCASE ASC',
-    );
-
-    return maps.map(InventoryItem.fromMap).toList();
-  }
-
   Future<int> deleteItem(int id) async {
     final db = await database;
     return db.delete('items', where: 'id = ?', whereArgs: [id]);
@@ -356,27 +330,6 @@ class DatabaseHelper {
 
       await transaction.insert('items', targetMap);
     });
-  }
-
-  Future<void> markItemAsPurchased(InventoryItem item) async {
-    final current = item.quantityValue ?? 0;
-    final purchased = item.shoppingQuantityValue;
-
-    if (purchased == null || purchased <= 0) {
-      throw ArgumentError(
-        'Für diesen Artikel ist keine gültige Einkaufsmenge hinterlegt.',
-      );
-    }
-
-    final newQuantity = current + purchased;
-
-    await updateItem(
-      item.copyWith(
-        quantity: _formatQuantity(newQuantity),
-        location: item.defaultLocation,
-        isOnShoppingList: false,
-      ),
-    );
   }
 
   String _formatQuantity(double value) {
