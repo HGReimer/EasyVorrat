@@ -20,8 +20,8 @@ void main() {
     });
     await tester.pump();
 
-    expect(find.text('EasyVorrat'), findsOneWidget);
-    expect(find.text('Bestand'), findsOneWidget);
+    expect(find.text('EasyVorrat'), findsNWidgets(2));
+    expect(find.text('Artikel'), findsOneWidget);
     expect(find.text('Kühlschrank'), findsOneWidget);
     expect(find.text('Speisekammer'), findsOneWidget);
     expect(find.text('Keller'), findsOneWidget);
