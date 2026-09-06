@@ -217,6 +217,24 @@ class DatabaseHelper {
     return db.insert('items', map);
   }
 
+  Future<List<InventoryItem>> getAllInventoryItems() async {
+    final db = await database;
+
+    final maps = await db.query(
+      'items',
+      where: '''
+        NOT (
+          isOnShoppingList = 1
+          AND autoShoppingList = 0
+          AND CAST(REPLACE(quantity, ',', '.') AS REAL) <= 0
+        )
+      ''',
+      orderBy: 'location COLLATE NOCASE ASC, name COLLATE NOCASE ASC',
+    );
+
+    return maps.map(InventoryItem.fromMap).toList();
+  }
+
   Future<List<InventoryItem>> getItemsForLocation(String location) async {
     final db = await database;
     final maps = await db.query(

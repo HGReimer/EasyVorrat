@@ -6,6 +6,7 @@ import '../services/database_helper.dart';
 import '../theme/easy_vorrat_theme.dart';
 import '../widgets/easy_vorrat_widgets.dart';
 import 'add_item_screen.dart';
+import 'inventory_overview_screen.dart';
 import 'location_screen.dart';
 import 'shopping_list_screen.dart';
 
@@ -316,6 +317,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           value: '$_totalItems',
                           label: 'Artikel',
                           icon: Icons.inventory_2_outlined,
+                          onTap: () async {
+                            await Navigator.push<void>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const InventoryOverviewScreen(),
+                              ),
+                            );
+
+                            if (mounted) {
+                              await _loadDashboard();
+                            }
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
