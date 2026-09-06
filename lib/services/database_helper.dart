@@ -210,7 +210,10 @@ class DatabaseHelper {
 
   Future<int> insertItem(InventoryItem item) async {
     final db = await database;
-    final map = item.toMap()..remove('id');
+    final itemToInsert = item.autoShoppingList && item.hasReachedMinimum
+        ? item.copyWith(isOnShoppingList: true)
+        : item;
+    final map = itemToInsert.toMap()..remove('id');
     return db.insert('items', map);
   }
 

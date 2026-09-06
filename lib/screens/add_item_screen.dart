@@ -21,6 +21,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final nameController = TextEditingController();
   final quantityController = TextEditingController();
   final unitController = TextEditingController();
+  final minimumQuantityController = TextEditingController();
+  final shoppingQuantityController = TextEditingController();
+  bool _autoShoppingList = false;
   DateTime? _expiryDate;
   String? _scannedCode;
 
@@ -29,6 +32,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
     nameController.dispose();
     quantityController.dispose();
     unitController.dispose();
+    minimumQuantityController.dispose();
+    shoppingQuantityController.dispose();
     super.dispose();
   }
 
@@ -79,6 +84,41 @@ class _AddItemScreenState extends State<AddItemScreen> {
       }
     }
 
+    if (!widget.shoppingMode && _autoShoppingList) {
+      final currentAmount = double.tryParse(quantity.replaceAll(',', '.'));
+      final minimumAmount = double.tryParse(
+        minimumQuantityController.text.trim().replaceAll(',', '.'),
+      );
+      final shoppingAmount = double.tryParse(
+        shoppingQuantityController.text.trim().replaceAll(',', '.'),
+      );
+
+      if (currentAmount == null || currentAmount < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bitte eine gültige Menge eingeben.')),
+        );
+        return;
+      }
+
+      if (minimumAmount == null || minimumAmount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Der Mindestbestand muss größer als 0 sein.'),
+          ),
+        );
+        return;
+      }
+
+      if (shoppingAmount == null || shoppingAmount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Die Nachkaufmenge muss größer als 0 sein.'),
+          ),
+        );
+        return;
+      }
+    }
+
     Navigator.pop(
       context,
       InventoryItem(
@@ -87,7 +127,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
         unit: unit,
         location: widget.locationName,
         expiryDate: _expiryDate,
-        shoppingQuantity: widget.shoppingMode ? quantity : '',
+        minimumQuantity: widget.shoppingMode
+            ? ''
+            : minimumQuantityController.text.trim(),
+        shoppingQuantity: widget.shoppingMode
+            ? quantity
+            : shoppingQuantityController.text.trim(),
+        autoShoppingList: !widget.shoppingMode && _autoShoppingList,
         isOnShoppingList: widget.shoppingMode,
       ),
     );
@@ -111,7 +157,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
+        child: ListView(
           children: [
             OutlinedButton.icon(
               onPressed: _scanBarcode,
@@ -134,10 +180,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: quantityController,
-              decoration: const InputDecoration(
-                labelText: 'Menge',
-                hintText: 'z. B. 2 × 1',
-                border: OutlineInputBorder(),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: widget.shoppingMode ? 'Einkaufsmenge' : 'Menge',
+                hintText: widget.shoppingMode ? 'z. B. 2' : 'z. B. 2 × 1',
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -145,7 +194,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               controller: unitController,
               decoration: const InputDecoration(
                 labelText: 'Einheit',
-                hintText: 'z. B. l, kg, Stück',
+                hintText: 'z. B. Liter, kg, Stück oder Packungen',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -165,6 +214,44 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
               ),
             ),
+            if (!widget.shoppingMode) ...[
+              const SizedBox(height: 16),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Automatisch auf die Einkaufsliste'),
+                subtitle: const Text('Sobald der Mindestbestand erreicht ist'),
+                value: _autoShoppingList,
+                onChanged: (value) {
+                  setState(() => _autoShoppingList = value);
+                },
+              ),
+              if (_autoShoppingList) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: minimumQuantityController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Mindestbestand',
+                    hintText: 'z. B. 2',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: shoppingQuantityController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Nachkaufmenge',
+                    hintText: 'z. B. 6',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: _save,
