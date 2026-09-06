@@ -6,6 +6,7 @@ import '../services/database_helper.dart';
 import '../theme/easy_vorrat_theme.dart';
 import '../widgets/easy_vorrat_widgets.dart';
 import 'add_item_screen.dart';
+import 'assistant_screen.dart';
 import 'inventory_overview_screen.dart';
 import 'location_screen.dart';
 import 'shopping_list_screen.dart';
@@ -286,7 +287,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('EasyVorrat')),
+      appBar: AppBar(
+        title: const Text('EasyVorrat'),
+        actions: [
+          IconButton(
+            tooltip: 'EasyAssistent öffnen',
+            onPressed: () {
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute(builder: (_) => const AssistantScreen()),
+              );
+            },
+            icon: const Icon(Icons.smart_toy_outlined),
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

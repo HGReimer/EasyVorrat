@@ -6,11 +6,13 @@ import 'barcode_scanner_screen.dart';
 class AddItemScreen extends StatefulWidget {
   final String locationName;
   final bool shoppingMode;
+  final InventoryItem? existingItem;
 
   const AddItemScreen({
     super.key,
     required this.locationName,
     this.shoppingMode = false,
+    this.existingItem,
   });
 
   @override
@@ -26,6 +28,22 @@ class _AddItemScreenState extends State<AddItemScreen> {
   bool _autoShoppingList = false;
   DateTime? _expiryDate;
   String? _scannedCode;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final item = widget.existingItem;
+    if (item == null) return;
+
+    nameController.text = item.name;
+    quantityController.text = item.quantity;
+    unitController.text = item.unit;
+    minimumQuantityController.text = item.minimumQuantity;
+    shoppingQuantityController.text = item.shoppingQuantity;
+    _autoShoppingList = item.autoShoppingList;
+    _expiryDate = item.expiryDate;
+  }
 
   @override
   void dispose() {
@@ -122,10 +140,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
     Navigator.pop(
       context,
       InventoryItem(
+        id: widget.existingItem?.id,
         name: name,
         quantity: widget.shoppingMode ? '0' : quantity,
         unit: unit,
         location: widget.locationName,
+        defaultLocation: widget.existingItem?.defaultLocation,
         expiryDate: _expiryDate,
         minimumQuantity: widget.shoppingMode
             ? ''
@@ -134,7 +154,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
             ? quantity
             : shoppingQuantityController.text.trim(),
         autoShoppingList: !widget.shoppingMode && _autoShoppingList,
-        isOnShoppingList: widget.shoppingMode,
+        isOnShoppingList: widget.shoppingMode
+            ? true
+            : widget.existingItem?.isOnShoppingList ?? false,
       ),
     );
   }
@@ -152,7 +174,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
         title: Text(
           widget.shoppingMode
               ? 'Einkaufsartikel hinzufügen'
-              : 'Artikel hinzufügen',
+              : widget.existingItem == null
+              ? 'Artikel hinzufügen'
+              : 'Artikel bearbeiten',
         ),
       ),
       body: Padding(
@@ -255,8 +279,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: _save,
-              icon: const Icon(Icons.add),
-              label: const Text('Hinzufügen'),
+              icon: Icon(
+                widget.existingItem == null ? Icons.add : Icons.save_outlined,
+              ),
+              label: Text(
+                widget.existingItem == null ? 'Hinzufügen' : 'Speichern',
+              ),
             ),
           ],
         ),

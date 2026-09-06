@@ -272,7 +272,10 @@ class DatabaseHelper {
     }
 
     final db = await database;
-    final map = item.toMap()..remove('id');
+    final itemToUpdate = item.autoShoppingList && item.hasReachedMinimum
+        ? item.copyWith(isOnShoppingList: true)
+        : item;
+    final map = itemToUpdate.toMap()..remove('id');
 
     return db.update('items', map, where: 'id = ?', whereArgs: [id]);
   }

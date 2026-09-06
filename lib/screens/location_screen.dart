@@ -50,6 +50,26 @@ class _LocationScreenState extends State<LocationScreen> {
     await _loadItems();
   }
 
+  Future<void> _editItem(InventoryItem item) async {
+    final updatedItem = await Navigator.push<InventoryItem>(
+      context,
+      MaterialPageRoute<InventoryItem>(
+        builder: (_) => AddItemScreen(
+          locationName: widget.locationName,
+          existingItem: item,
+        ),
+      ),
+    );
+
+    if (!mounted || updatedItem == null) return;
+
+    await DatabaseHelper.instance.updateItem(updatedItem);
+
+    if (!mounted) return;
+
+    await _loadItems();
+  }
+
   Future<void> _deleteItem(InventoryItem item) async {
     if (item.id != null) {
       await DatabaseHelper.instance.deleteItem(item.id!);
@@ -195,6 +215,13 @@ class _LocationScreenState extends State<LocationScreen> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        IconButton(
+                          onPressed: () {
+                            _editItem(item);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Artikel bearbeiten',
+                        ),
                         IconButton(
                           onPressed: () {
                             _addToShoppingList(item);
