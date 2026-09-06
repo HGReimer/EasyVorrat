@@ -4,6 +4,7 @@ import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
 import '../theme/easy_vorrat_theme.dart';
 import '../widgets/easy_vorrat_widgets.dart';
+import 'add_item_screen.dart';
 
 class ShoppingListScreen extends StatefulWidget {
   const ShoppingListScreen({super.key});
@@ -33,6 +34,64 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       _items = items;
       _isLoading = false;
     });
+  }
+
+  Future<void> _addFreeItem() async {
+    final locations = await DatabaseHelper.instance.getLocations();
+
+    if (!mounted) return;
+
+    if (locations.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bitte zuerst einen Lagerort anlegen.')),
+      );
+      return;
+    }
+
+    final locationName = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Lagerort für den Einkauf auswählen',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              for (final location in locations)
+                ListTile(
+                  leading: const Icon(Icons.storage_outlined),
+                  title: Text(location.name),
+                  onTap: () {
+                    Navigator.pop(sheetContext, location.name);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || locationName == null) return;
+
+    final item = await Navigator.push<InventoryItem>(
+      context,
+      MaterialPageRoute<InventoryItem>(
+        builder: (_) =>
+            AddItemScreen(locationName: locationName, shoppingMode: true),
+      ),
+    );
+
+    if (!mounted || item == null) return;
+
+    await DatabaseHelper.instance.insertItem(item);
+
+    if (!mounted) return;
+
+    await _loadItems();
   }
 
   Future<void> _markPurchased(InventoryItem item) async {
@@ -98,6 +157,11 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Einkaufsliste')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addFreeItem,
+        icon: const Icon(Icons.add),
+        label: const Text('Artikel hinzufügen'),
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

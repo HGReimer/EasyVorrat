@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/inventory_item.dart';
 import '../models/storage_location.dart';
 import '../services/database_helper.dart';
 import '../theme/easy_vorrat_theme.dart';
@@ -253,12 +254,18 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    await Navigator.push(
+    final item = await Navigator.push<InventoryItem>(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<InventoryItem>(
         builder: (_) => AddItemScreen(locationName: location.name),
       ),
     );
+
+    if (!mounted || item == null) {
+      return;
+    }
+
+    await DatabaseHelper.instance.insertItem(item);
 
     if (mounted) {
       await _loadDashboard();

@@ -5,8 +5,13 @@ import 'barcode_scanner_screen.dart';
 
 class AddItemScreen extends StatefulWidget {
   final String locationName;
+  final bool shoppingMode;
 
-  const AddItemScreen({super.key, required this.locationName});
+  const AddItemScreen({
+    super.key,
+    required this.locationName,
+    this.shoppingMode = false,
+  });
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -62,14 +67,28 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
     if (name.isEmpty) return;
 
+    if (widget.shoppingMode) {
+      final shoppingAmount = double.tryParse(quantity.replaceAll(',', '.'));
+      if (shoppingAmount == null || shoppingAmount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bitte eine gültige Einkaufsmenge eingeben.'),
+          ),
+        );
+        return;
+      }
+    }
+
     Navigator.pop(
       context,
       InventoryItem(
         name: name,
-        quantity: quantity,
+        quantity: widget.shoppingMode ? '0' : quantity,
         unit: unit,
         location: widget.locationName,
         expiryDate: _expiryDate,
+        shoppingQuantity: widget.shoppingMode ? quantity : '',
+        isOnShoppingList: widget.shoppingMode,
       ),
     );
   }
@@ -83,7 +102,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Artikel hinzufügen')),
+      appBar: AppBar(
+        title: Text(
+          widget.shoppingMode
+              ? 'Einkaufsartikel hinzufügen'
+              : 'Artikel hinzufügen',
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
