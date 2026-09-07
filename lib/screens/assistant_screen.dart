@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
@@ -14,14 +15,100 @@ class AssistantScreen extends StatefulWidget {
 
 class _AssistantScreenState extends State<AssistantScreen> {
   final _questionController = TextEditingController();
+  final SpeechToText _speech = SpeechToText();
+  bool _speechAvailable = false;
+  bool _isListening = false;
+
   String _answer =
       'Hallo, ich bin dein EasyAssistent. Was möchtest du über deinen Vorrat wissen?';
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _initializeSpeech();
+  }
+
+  Future<void> _initializeSpeech() async {
+    final available = await _speech.initialize(
+      onStatus: (status) {
+        if (!mounted) return;
+
+        setState(() {
+          _isListening = status == 'listening';
+        });
+      },
+      onError: (error) {
+        if (!mounted) return;
+
+        setState(() {
+          _isListening = false;
+          _answer = 'Spracherkennung: ${error.errorMsg}';
+        });
+      },
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _speechAvailable = available;
+    });
+  }
+
+  @override
   void dispose() {
     _questionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleListening() async {
+    if (_speech.isListening) {
+      await _speech.stop();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isListening = false;
+      });
+      return;
+    }
+
+    if (!_speechAvailable) {
+      setState(() {
+        _answer = 'Die Spracherkennung ist in diesem Browser nicht verfügbar.';
+      });
+      return;
+    }
+
+    final locales = await _speech.locales();
+    String? germanLocale;
+
+    for (final locale in locales) {
+      if (locale.localeId.toLowerCase().startsWith('de')) {
+        germanLocale = locale.localeId;
+        break;
+      }
+    }
+
+    await _speech.listen(
+      onResult: (result) {
+        if (!mounted) return;
+
+        setState(() {
+          _questionController.text = result.recognizedWords;
+          _questionController.selection = TextSelection.collapsed(
+            offset: _questionController.text.length,
+          );
+        });
+      },
+      listenOptions: SpeechListenOptions(localeId: germanLocale),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isListening = _speech.isListening;
+    });
   }
 
   String _amount(InventoryItem item) {
@@ -464,11 +551,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
             controller: _questionController,
             textInputAction: TextInputAction.send,
             onSubmitted: (_) => _ask(),
-            decoration: const InputDecoration(
-              labelText: 'Deine Frage',
+            decoration: InputDecoration(
+              labelText: _isListening ? 'Ich höre zu …' : 'Deine Frage',
               hintText: 'z. B. Wie viel Milch ist vorhanden?',
-              prefixIcon: Icon(Icons.chat_outlined),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.chat_outlined),
+              suffixIcon: IconButton(
+                onPressed: _toggleListening,
+                tooltip: _isListening ? 'Zuhören beenden' : 'Spracheingabe',
+                icon: Icon(
+                  _isListening ? Icons.mic : Icons.mic_none,
+                  color: _isListening
+                      ? EasyVorratColors.danger
+                      : EasyVorratColors.green,
+                ),
+              ),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
