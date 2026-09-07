@@ -55,6 +55,126 @@ class _AssistantScreenState extends State<AssistantScreen> {
         '– danach nach ${item.defaultLocation}';
   }
 
+  Future<String> _addExistingItemToShoppingList(String question) async {
+    final items = await DatabaseHelper.instance.getAllInventoryItems();
+
+    if (!mounted) return 'Die Aktion wurde abgebrochen.';
+
+    final normalized = question.toLowerCase();
+    final matches = items.where((item) {
+      return normalized.contains(item.name.toLowerCase());
+    }).toList();
+
+    if (matches.isEmpty) {
+      return 'Ich finde diesen Artikel nicht im Bestand. '
+          'Neue Artikel kannst du direkt in der Einkaufsliste hinzufügen.';
+    }
+
+    InventoryItem? selectedItem;
+
+    if (matches.length == 1) {
+      selectedItem = matches.first;
+    } else {
+      final locationMatches = matches.where((item) {
+        return normalized.contains(item.location.toLowerCase());
+      }).toList();
+
+      if (locationMatches.length == 1) {
+        selectedItem = locationMatches.first;
+      }
+    }
+
+    if (selectedItem == null) {
+      return 'Ich habe mehrere passende Artikel gefunden. '
+          'Nenne bitte zusätzlich den Lagerort.';
+    }
+
+    if (selectedItem.isOnShoppingList) {
+      return '${selectedItem.name} steht bereits auf der Einkaufsliste.';
+    }
+
+    final item = selectedItem;
+    final controller = TextEditingController(text: item.shoppingQuantity);
+
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('${item.name} auf die Einkaufsliste?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Aktueller Bestand: ${_amount(item)}'),
+              Text('Lagerort: ${item.location}'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Nachkaufmenge',
+                  suffixText: item.unit.isEmpty ? null : item.unit,
+                  hintText: 'z. B. 6',
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (value) {
+                  Navigator.pop(dialogContext, value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext, controller.text);
+              },
+              icon: const Icon(Icons.add_shopping_cart),
+              label: const Text('Bestätigen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (!mounted || result == null) {
+      return 'Die Aktion wurde abgebrochen.';
+    }
+
+    final normalizedAmount = result.trim().replaceAll(',', '.');
+    final amount = double.tryParse(normalizedAmount);
+
+    if (amount == null || amount <= 0) {
+      return 'Bitte gib eine gültige Nachkaufmenge ein.';
+    }
+
+    await DatabaseHelper.instance.updateItem(
+      item.copyWith(shoppingQuantity: normalizedAmount, isOnShoppingList: true),
+    );
+
+    final amountText = item.unit.trim().isEmpty
+        ? normalizedAmount
+        : '$normalizedAmount ${item.unit}';
+
+    return '${item.name} wurde mit $amountText '
+        'auf die Einkaufsliste gesetzt.';
+  }
+
   Future<String> _createAnswer(String question) async {
     final items = await DatabaseHelper.instance.getAllInventoryItems();
     final shoppingItems = await DatabaseHelper.instance.getShoppingListItems();
@@ -152,7 +272,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _answer = 'Ich prüfe deinen Vorrat …';
     });
 
-    final answer = await _createAnswer(question);
+    final normalized = question.toLowerCase();
+    final isShoppingAction =
+        normalized.contains('einkauf') &&
+        (normalized.contains('setz') ||
+            normalized.contains('füg') ||
+            normalized.contains('pack') ||
+            normalized.contains('schreib'));
+
+    final answer = isShoppingAction
+        ? await _addExistingItemToShoppingList(question)
+        : await _createAnswer(question);
 
     if (!mounted) return;
 
