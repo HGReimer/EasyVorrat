@@ -382,17 +382,19 @@ class DatabaseHelper {
     });
   }
 
-  Future<void> markItemAsPurchased(InventoryItem item) async {
+  Future<void> markItemAsPurchased(
+    InventoryItem item, {
+    required double purchasedAmount,
+  }) async {
     final current = item.quantityValue ?? 0;
-    final purchased = item.shoppingQuantityValue;
 
-    if (purchased == null || purchased <= 0) {
+    if (purchasedAmount <= 0) {
       throw ArgumentError(
-        'Für diesen Artikel ist keine gültige Einkaufsmenge hinterlegt.',
+        'Die tatsächlich gekaufte Menge muss größer als 0 sein.',
       );
     }
 
-    final newQuantity = current + purchased;
+    final newQuantity = current + purchasedAmount;
 
     await updateItem(
       item.copyWith(

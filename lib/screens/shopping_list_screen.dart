@@ -95,31 +95,76 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   Future<void> _markPurchased(InventoryItem item) async {
-    final purchased = item.shoppingQuantityValue;
+    final controller = TextEditingController(text: item.shoppingQuantity);
 
-    if (purchased == null || purchased <= 0) {
-      if (!mounted) {
-        return;
-      }
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('${item.name} gekauft'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Tatsächlich gekaufte Menge',
+              suffixText: item.unit.isEmpty ? null : item.unit,
+              hintText: 'z. B. 10',
+            ),
+            onSubmitted: (value) {
+              Navigator.pop(dialogContext, value);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext, controller.text);
+              },
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: const Text('Einbuchen'),
+            ),
+          ],
+        );
+      },
+    );
 
+    controller.dispose();
+
+    if (!mounted || result == null) return;
+
+    final normalized = result.trim().replaceAll(',', '.');
+    final purchasedAmount = double.tryParse(normalized);
+
+    if (purchasedAmount == null || purchasedAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Für diesen Artikel ist noch keine Einkaufsmenge festgelegt.',
-          ),
+          content: Text('Bitte eine gültige Einkaufsmenge eingeben.'),
         ),
       );
       return;
     }
 
-    await DatabaseHelper.instance.markItemAsPurchased(item);
+    await DatabaseHelper.instance.markItemAsPurchased(
+      item,
+      purchasedAmount: purchasedAmount,
+    );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
+
+    final amountText = item.unit.trim().isEmpty
+        ? normalized
+        : '$normalized ${item.unit}';
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item.name}: Einkauf zum Bestand hinzugefügt.')),
+      SnackBar(
+        content: Text('${item.name}: $amountText zum Bestand hinzugefügt.'),
+      ),
     );
 
     await _loadItems();
