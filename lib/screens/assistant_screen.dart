@@ -175,6 +175,142 @@ class _AssistantScreenState extends State<AssistantScreen> {
         'auf die Einkaufsliste gesetzt.';
   }
 
+  Future<String> _consumeExistingItem(String question) async {
+    final items = await DatabaseHelper.instance.getAllInventoryItems();
+
+    if (!mounted) return 'Die Aktion wurde abgebrochen.';
+
+    final normalized = question.toLowerCase();
+    final matches = items.where((item) {
+      return normalized.contains(item.name.toLowerCase());
+    }).toList();
+
+    if (matches.isEmpty) {
+      return 'Ich finde diesen Artikel nicht im Bestand.';
+    }
+
+    InventoryItem? selectedItem;
+
+    if (matches.length == 1) {
+      selectedItem = matches.first;
+    } else {
+      final locationMatches = matches.where((item) {
+        return normalized.contains(item.location.toLowerCase());
+      }).toList();
+
+      if (locationMatches.length == 1) {
+        selectedItem = locationMatches.first;
+      }
+    }
+
+    if (selectedItem == null) {
+      return 'Ich habe mehrere passende Artikel gefunden. '
+          'Nenne bitte zusätzlich den Lagerort.';
+    }
+
+    final numberMatch = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(normalized);
+    final amountText = numberMatch?.group(1);
+
+    if (amountText == null) {
+      return 'Nenne bitte auch die verbrauchte Menge.';
+    }
+
+    final amount = double.tryParse(amountText.replaceAll(',', '.'));
+    final current = selectedItem.quantityValue;
+
+    if (amount == null || amount <= 0) {
+      return 'Die Verbrauchsmenge muss größer als 0 sein.';
+    }
+
+    if (current == null) {
+      return 'Die vorhandene Menge von ${selectedItem.name} '
+          'ist keine gültige Zahl.';
+    }
+
+    if (amount > current) {
+      return 'Es sind nur ${_amount(selectedItem)} vorhanden. '
+          'Du kannst nicht mehr verbrauchen als im Bestand ist.';
+    }
+
+    String formatNumber(double value) {
+      if (value == value.roundToDouble()) {
+        return value.toInt().toString();
+      }
+
+      return value
+          .toStringAsFixed(3)
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
+    }
+
+    final remaining = current - amount;
+    final unit = selectedItem.unit.trim();
+    final suffix = unit.isEmpty ? '' : ' $unit';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Verbrauch bestätigen'),
+          content: Text(
+            '${selectedItem!.name}\n\n'
+            'Bisher: ${formatNumber(current)}$suffix\n'
+            'Verbrauch: ${formatNumber(amount)}$suffix\n'
+            'Danach: ${formatNumber(remaining)}$suffix',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              icon: const Icon(Icons.remove_circle_outline),
+              label: const Text('Verbrauch buchen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || confirmed != true) {
+      return 'Die Aktion wurde abgebrochen.';
+    }
+
+    await DatabaseHelper.instance.consumeItem(
+      item: selectedItem,
+      amount: amount,
+    );
+
+    if (remaining <= 0) {
+      if (selectedItem.autoShoppingList) {
+        return '${selectedItem.name}: Bestand ist jetzt 0$suffix. '
+            'Der Artikel steht auf der Einkaufsliste.';
+      }
+
+      return '${selectedItem.name} wurde vollständig verbraucht '
+          'und aus dem Bestand entfernt.';
+    }
+
+    final minimum = selectedItem.minimumQuantityValue;
+
+    if (selectedItem.autoShoppingList &&
+        minimum != null &&
+        remaining <= minimum) {
+      return '${selectedItem.name}: Neuer Bestand '
+          '${formatNumber(remaining)}$suffix. '
+          'Der Mindestbestand ist erreicht; der Artikel steht jetzt '
+          'auf der Einkaufsliste.';
+    }
+
+    return '${selectedItem.name}: Neuer Bestand '
+        '${formatNumber(remaining)}$suffix.';
+  }
+
   Future<String> _createAnswer(String question) async {
     final items = await DatabaseHelper.instance.getAllInventoryItems();
     final shoppingItems = await DatabaseHelper.instance.getShoppingListItems();
@@ -280,9 +416,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
             normalized.contains('pack') ||
             normalized.contains('schreib'));
 
-    final answer = isShoppingAction
-        ? await _addExistingItemToShoppingList(question)
-        : await _createAnswer(question);
+    final isConsumptionAction =
+        normalized.contains('verbrauch') ||
+        normalized.contains('entnomm') ||
+        normalized.contains('genommen') ||
+        normalized.contains('getrunken') ||
+        normalized.contains('benutzt');
+
+    final String answer;
+
+    if (isShoppingAction) {
+      answer = await _addExistingItemToShoppingList(question);
+    } else if (isConsumptionAction) {
+      answer = await _consumeExistingItem(question);
+    } else {
+      answer = await _createAnswer(question);
+    }
 
     if (!mounted) return;
 
