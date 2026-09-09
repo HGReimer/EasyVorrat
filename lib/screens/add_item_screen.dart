@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/inventory_item.dart';
+import '../services/product_lookup_service.dart';
 import 'barcode_scanner_screen.dart';
 
 class AddItemScreen extends StatefulWidget {
@@ -28,6 +29,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
   bool _autoShoppingList = false;
   DateTime? _expiryDate;
   String? _scannedCode;
+  String? _productImageUrl;
+  bool _isLookingUpProduct = false;
 
   @override
   void initState() {
@@ -68,19 +71,95 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
+  void _applyPackageQuantity(String packageQuantity) {
+    final match = RegExp(
+      r'^(\d+(?:[.,]\d+)?)\s*(ml|cl|dl|l|g|kg|stück)$',
+      caseSensitive: false,
+    ).firstMatch(packageQuantity.trim());
+
+    if (match == null) return;
+
+    if (quantityController.text.trim().isEmpty) {
+      quantityController.text = match.group(1)!.replaceAll(',', '.');
+    }
+
+    if (unitController.text.trim().isEmpty) {
+      final unit = match.group(2)!;
+      unitController.text = unit.toLowerCase() == 'stück'
+          ? 'Stück'
+          : unit.toLowerCase();
+    }
+  }
+
   Future<void> _scanBarcode() async {
     final code = await Navigator.push<String>(
       context,
       MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
-    if (code == null) return;
+
+    if (!mounted || code == null) return;
 
     setState(() {
       _scannedCode = code;
+      _productImageUrl = null;
+      _isLookingUpProduct = true;
+    });
+
+    try {
+      final product = await ProductLookupService.findByBarcode(code);
+
+      if (!mounted) return;
+
+      if (product == null) {
+        if (nameController.text.trim().isEmpty) {
+          nameController.text = code;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Produkt nicht gefunden. Bitte die Daten selbst eintragen.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        nameController.text = product.displayName;
+        _applyPackageQuantity(product.packageQuantity);
+        _productImageUrl = product.imageUrl.isEmpty ? null : product.imageUrl;
+      });
+
+      final packageText = product.packageQuantity.isEmpty
+          ? ''
+          : ' (${product.packageQuantity})';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${product.displayName}$packageText erkannt.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
       if (nameController.text.trim().isEmpty) {
         nameController.text = code;
       }
-    });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Produktdaten konnten nicht geladen werden. '
+            'Bitte Internetverbindung prüfen.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLookingUpProduct = false;
+        });
+      }
+    }
   }
 
   void _save() {
@@ -184,14 +263,40 @@ class _AddItemScreenState extends State<AddItemScreen> {
         child: ListView(
           children: [
             OutlinedButton.icon(
-              onPressed: _scanBarcode,
-              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: _isLookingUpProduct ? null : _scanBarcode,
+              icon: _isLookingUpProduct
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.qr_code_scanner),
               label: Text(
-                _scannedCode == null
+                _isLookingUpProduct
+                    ? 'Produkt wird gesucht …'
+                    : _scannedCode == null
                     ? 'Barcode scannen'
                     : 'Gescannt: $_scannedCode',
               ),
             ),
+            if (_productImageUrl != null) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    _productImageUrl!,
+                    height: 140,
+                    width: 180,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const SizedBox(
+                      height: 80,
+                      child: Icon(Icons.image_not_supported_outlined, size: 42),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: nameController,
