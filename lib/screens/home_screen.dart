@@ -308,73 +308,85 @@ class _HomeScreenState extends State<HomeScreen> {
               onRefresh: _loadDashboard,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                 children: [
-                  const SizedBox(height: 8),
                   const Icon(
                     Icons.inventory_2_outlined,
-                    size: 72,
+                    size: 48,
                     color: EasyVorratColors.green,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
                   Text(
-                    'EasyVorrat',
+                    'Dein Vorrat auf einen Blick',
                     textAlign: TextAlign.center,
                     style: Theme.of(
                       context,
-                    ).textTheme.titleLarge?.copyWith(fontSize: 30),
+                    ).textTheme.titleLarge?.copyWith(fontSize: 22),
                   ),
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatusCard(
-                          value: '$_totalItems',
-                          label: 'Artikel',
-                          icon: Icons.inventory_2_outlined,
-                          onTap: () async {
-                            await Navigator.push<void>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const InventoryOverviewScreen(),
-                              ),
-                            );
+                  const SizedBox(height: 20),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 600;
+                      final cardWidth = isMobile
+                          ? (constraints.maxWidth - 12) / 2
+                          : (constraints.maxWidth - 24) / 3;
 
-                            if (mounted) {
-                              await _loadDashboard();
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatusCard(
-                          value: '$_expiringItems',
-                          label: 'Bald ablaufend',
-                          icon: Icons.schedule,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatusCard(
-                          value: '$_shoppingItems',
-                          label: 'Einkaufsliste',
-                          icon: Icons.shopping_cart_outlined,
-                          onTap: () async {
-                            await Navigator.push<void>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ShoppingListScreen(),
-                              ),
-                            );
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          SizedBox(
+                            width: cardWidth,
+                            child: _StatusCard(
+                              value: '$_totalItems',
+                              label: 'Artikel',
+                              icon: Icons.inventory_2_outlined,
+                              onTap: () async {
+                                await Navigator.push<void>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const InventoryOverviewScreen(),
+                                  ),
+                                );
 
-                            if (mounted) {
-                              await _loadDashboard();
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                                if (mounted) {
+                                  await _loadDashboard();
+                                }
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: cardWidth,
+                            child: _StatusCard(
+                              value: '$_expiringItems',
+                              label: 'Bald ablaufend',
+                              icon: Icons.schedule,
+                            ),
+                          ),
+                          SizedBox(
+                            width: isMobile ? constraints.maxWidth : cardWidth,
+                            child: _StatusCard(
+                              value: '$_shoppingItems',
+                              label: 'Einkaufsliste',
+                              icon: Icons.shopping_cart_outlined,
+                              onTap: () async {
+                                await Navigator.push<void>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ShoppingListScreen(),
+                                  ),
+                                );
+
+                                if (mounted) {
+                                  await _loadDashboard();
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
                   const EasyVorratSectionHeader(
@@ -418,9 +430,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     height: 52,
                     child: ElevatedButton.icon(
                       onPressed: _addItem,
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(Icons.document_scanner_outlined),
                       label: const Text(
-                        'Artikel hinzufügen',
+                        'Artikel erfassen',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -428,14 +440,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: _addLocation,
+                      icon: const Icon(Icons.add_location_alt_outlined),
+                      label: const Text('Lagerort hinzufügen'),
+                    ),
+                  ),
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addLocation,
-        icon: const Icon(Icons.add_location_alt_outlined),
-        label: const Text('Lagerort hinzufügen'),
-      ),
     );
   }
 }
@@ -514,7 +530,7 @@ class _LocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 240,
+      width: MediaQuery.sizeOf(context).width < 600 ? double.infinity : 240,
       child: EasyVorratPanel(
         padding: EdgeInsets.zero,
         child: Row(
