@@ -17,6 +17,12 @@ class DatabaseHelper {
   ];
 
   Database? _db;
+  String? _databasePathOverride;
+
+  void useInMemoryDatabaseForTesting() {
+    _databasePathOverride = inMemoryDatabasePath;
+    _db = null;
+  }
 
   Future<Database> get database async {
     _db ??= await _initDatabase();
@@ -24,7 +30,9 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final path = join(await getDatabasesPath(), 'easy_vorrat.db');
+    final path =
+        _databasePathOverride ??
+        join(await getDatabasesPath(), 'easy_vorrat.db');
 
     return openDatabase(
       path,
