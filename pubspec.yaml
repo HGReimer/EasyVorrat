@@ -41,6 +41,7 @@ dependencies:
   speech_to_text: ^7.4.0
   http: ^1.6.0
   sqflite: ^2.4.4
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:

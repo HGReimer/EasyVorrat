@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/inventory_item.dart';
+import '../services/photo_recognition_service.dart';
 import '../services/product_lookup_service.dart';
 import 'barcode_scanner_screen.dart';
 
@@ -29,8 +33,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
   bool _autoShoppingList = false;
   DateTime? _expiryDate;
   String? _scannedCode;
+  final ImagePicker _imagePicker = ImagePicker();
+
   String? _productImageUrl;
+  Uint8List? _productPhotoBytes;
   bool _isLookingUpProduct = false;
+  bool _isRecognizingPhoto = false;
 
   @override
   void initState() {
@@ -102,6 +110,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     setState(() {
       _scannedCode = code;
       _productImageUrl = null;
+      _productPhotoBytes = null;
       _isLookingUpProduct = true;
     });
 
@@ -158,6 +167,78 @@ class _AddItemScreenState extends State<AddItemScreen> {
         setState(() {
           _isLookingUpProduct = false;
         });
+      }
+    }
+  }
+
+  Future<void> _captureProductPhoto() async {
+    if (!PhotoRecognitionService.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fotoerkennung ist derzeit auf dem iPhone verfügbar.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isRecognizingPhoto = true);
+
+    try {
+      final photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+
+      if (!mounted || photo == null) return;
+
+      final bytes = await photo.readAsBytes();
+      final recognition = await PhotoRecognitionService.recognize(photo.path);
+
+      if (!mounted) return;
+
+      setState(() {
+        _productPhotoBytes = bytes;
+        _productImageUrl = null;
+        _scannedCode = null;
+
+        if (nameController.text.trim().isEmpty &&
+            recognition.suggestedName.isNotEmpty) {
+          nameController.text = recognition.suggestedName;
+        }
+
+        _applyPackageQuantity(recognition.packageQuantity);
+      });
+
+      final detectedName = recognition.suggestedName.isEmpty
+          ? 'Beschriftung'
+          : recognition.suggestedName;
+      final detectedQuantity = recognition.packageQuantity.isEmpty
+          ? ''
+          : ' (${recognition.packageQuantity})';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$detectedName$detectedQuantity erkannt. Bitte Angaben prüfen.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Das Foto konnte nicht ausgewertet werden. '
+            'Bitte näher und bei gutem Licht fotografieren.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRecognizingPhoto = false);
       }
     }
   }
@@ -263,7 +344,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
         child: ListView(
           children: [
             OutlinedButton.icon(
-              onPressed: _isLookingUpProduct ? null : _scanBarcode,
+              onPressed: _isLookingUpProduct || _isRecognizingPhoto
+                  ? null
+                  : _scanBarcode,
               icon: _isLookingUpProduct
                   ? const SizedBox(
                       width: 18,
@@ -279,6 +362,38 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     : 'Gescannt: $_scannedCode',
               ),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isLookingUpProduct || _isRecognizingPhoto
+                  ? null
+                  : _captureProductPhoto,
+              icon: _isRecognizingPhoto
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_a_photo_outlined),
+              label: Text(
+                _isRecognizingPhoto
+                    ? 'Foto wird ausgewertet …'
+                    : 'Produkt fotografieren',
+              ),
+            ),
+            if (_productPhotoBytes != null) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(
+                    _productPhotoBytes!,
+                    height: 180,
+                    width: 220,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
             if (_productImageUrl != null) ...[
               const SizedBox(height: 16),
               Center(
