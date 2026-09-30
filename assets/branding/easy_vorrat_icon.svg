@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102019"/>
+      <stop offset="1" stop-color="#050807"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#39ff6a"/>
+      <stop offset="1" stop-color="#19c94a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="370" fill="#39ff6a" opacity=".035"/>
+
+  <!-- Regalrahmen -->
+  <path d="M246 212V828M778 212V828"
+        fill="none" stroke="url(#glow)" stroke-width="48"
+        stroke-linecap="round"/>
+  <path d="M220 378H804M220 594H804M220 810H804"
+        fill="none" stroke="#39ff6a" stroke-width="44"
+        stroke-linecap="round"/>
+
+  <!-- Oberes Fach -->
+  <rect x="292" y="260" width="118" height="92" rx="18"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"/>
+  <path d="M476 350V272Q476 246 502 246H536Q562 246 562 272V350"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"
+        stroke-linejoin="round"/>
+  <rect x="630" y="244" width="108" height="108" rx="18"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"/>
+
+  <!-- Mittleres Fach -->
+  <path d="M292 566V452Q292 424 320 424H362Q390 424 390 452V566"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"/>
+  <rect x="458" y="446" width="116" height="120" rx="26"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"/>
+  <path d="M642 566V474H720V566"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"
+        stroke-linejoin="round"/>
+
+  <!-- Unteres Fach -->
+  <rect x="292" y="660" width="170" height="122" rx="20"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"/>
+  <path d="M540 782V682Q540 652 570 652H704Q734 652 734 682V782"
+        fill="#39ff6a" fill-opacity=".20"
+        stroke="#39ff6a" stroke-width="30"/>
+  <path d="M580 704H694"
+        stroke="#39ff6a" stroke-width="26"
+        stroke-linecap="round"/>
+</svg>
