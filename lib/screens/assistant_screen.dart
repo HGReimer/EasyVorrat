@@ -127,7 +127,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   String _itemLine(InventoryItem item) {
-    return '${item.name}: ${_amount(item)} – ${item.location}';
+    return '• ${item.name}: ${_amount(item)} – ${item.location}';
   }
 
   String _shoppingLine(InventoryItem item) {
@@ -138,7 +138,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         ? amount
         : '$amount ${item.unit}';
 
-    return '${item.name}: $shoppingAmount kaufen '
+    return '• ${item.name}: $shoppingAmount kaufen '
         '– danach nach ${item.defaultLocation}';
   }
 
@@ -401,6 +401,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<String> _createAnswer(String question) async {
     final items = await DatabaseHelper.instance.getAllInventoryItems();
     final shoppingItems = await DatabaseHelper.instance.getShoppingListItems();
+
+    int compareByName(InventoryItem a, InventoryItem b) {
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    }
+
+    items.sort(compareByName);
+    shoppingItems.sort(compareByName);
+
     final normalized = question.trim().toLowerCase();
 
     if (normalized.contains('einkauf')) {
