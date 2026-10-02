@@ -251,7 +251,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (name.isEmpty) return;
 
     if (widget.shoppingMode) {
-      final shoppingAmount = double.tryParse(quantity.replaceAll(',', '.'));
+      final shoppingAmount = InventoryItem.parseQuantity(quantity);
       if (shoppingAmount == null || shoppingAmount <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -263,12 +263,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
 
     if (!widget.shoppingMode && _autoShoppingList) {
-      final currentAmount = double.tryParse(quantity.replaceAll(',', '.'));
-      final minimumAmount = double.tryParse(
-        minimumQuantityController.text.trim().replaceAll(',', '.'),
+      final currentAmount = InventoryItem.parseQuantity(quantity);
+      final minimumAmount = InventoryItem.parseQuantity(
+        minimumQuantityController.text,
       );
-      final shoppingAmount = double.tryParse(
-        shoppingQuantityController.text.trim().replaceAll(',', '.'),
+      final shoppingAmount = InventoryItem.parseQuantity(
+        shoppingQuantityController.text,
       );
 
       if (currentAmount == null || currentAmount < 0) {
@@ -424,9 +424,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: quantityController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: widget.shoppingMode ? 'Einkaufsmenge' : 'Menge',
                 hintText: widget.shoppingMode ? 'z. B. 2' : 'z. B. 2 × 1',

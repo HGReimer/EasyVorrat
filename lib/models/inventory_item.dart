@@ -25,23 +25,32 @@ class InventoryItem {
     this.isOnShoppingList = false,
   }) : defaultLocation = defaultLocation ?? location;
 
-  double? get quantityValue {
-    final normalized = quantity.trim().replaceAll(',', '.');
+  static double? parseQuantity(String value) {
+    final normalized = value.trim().replaceAll(',', '.');
     if (normalized.isEmpty) return null;
-    return double.tryParse(normalized);
+
+    final factors = normalized.split(
+      RegExp(r'\s*(?:x|×|\*)\s*', caseSensitive: false),
+    );
+
+    if (factors.any((factor) => factor.isEmpty)) return null;
+
+    var result = 1.0;
+
+    for (final factor in factors) {
+      final number = double.tryParse(factor);
+      if (number == null) return null;
+      result *= number;
+    }
+
+    return result;
   }
 
-  double? get minimumQuantityValue {
-    final normalized = minimumQuantity.trim().replaceAll(',', '.');
-    if (normalized.isEmpty) return null;
-    return double.tryParse(normalized);
-  }
+  double? get quantityValue => parseQuantity(quantity);
 
-  double? get shoppingQuantityValue {
-    final normalized = shoppingQuantity.trim().replaceAll(',', '.');
-    if (normalized.isEmpty) return null;
-    return double.tryParse(normalized);
-  }
+  double? get minimumQuantityValue => parseQuantity(minimumQuantity);
+
+  double? get shoppingQuantityValue => parseQuantity(shoppingQuantity);
 
   bool get hasReachedMinimum {
     final current = quantityValue;
