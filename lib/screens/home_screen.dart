@@ -1,3 +1,5 @@
+import '../widgets/inventory_limit_dialog.dart';
+import '../services/plus_service.dart';
 import 'package:flutter/material.dart';
 
 import '../models/inventory_item.dart';
@@ -220,6 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _addItem() async {
+    if (!await ensureInventorySlot(context) || !mounted) return;
+
     if (_locations.isEmpty) {
       _showMessage('Bitte zuerst einen Lagerort anlegen.');
       return;
@@ -267,7 +271,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    await DatabaseHelper.instance.insertItem(item);
+    try {
+      await DatabaseHelper.instance.insertItem(item);
+    } on InventoryLimitException {
+      if (!mounted) return;
+      await showEasyVorratPlusDialog(context);
+      return;
+    }
 
     if (mounted) {
       await _loadDashboard();

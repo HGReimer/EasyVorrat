@@ -40,11 +40,7 @@ final ThemeData easyVorratTheme = ThemeData(
       fontWeight: FontWeight.bold,
       color: EasyVorratColors.green,
     ),
-    shape: Border(
-      bottom: BorderSide(
-        color: EasyVorratColors.border,
-      ),
-    ),
+    shape: Border(bottom: BorderSide(color: EasyVorratColors.border)),
   ),
   textTheme: const TextTheme(
     titleLarge: TextStyle(
@@ -55,43 +51,27 @@ final ThemeData easyVorratTheme = ThemeData(
       color: EasyVorratColors.textPrimary,
       fontWeight: FontWeight.w600,
     ),
-    bodyLarge: TextStyle(
-      color: EasyVorratColors.textPrimary,
-    ),
-    bodyMedium: TextStyle(
-      color: EasyVorratColors.textPrimary,
-    ),
-    bodySmall: TextStyle(
-      color: EasyVorratColors.textSecondary,
-    ),
+    bodyLarge: TextStyle(color: EasyVorratColors.textPrimary),
+    bodyMedium: TextStyle(color: EasyVorratColors.textPrimary),
+    bodySmall: TextStyle(color: EasyVorratColors.textSecondary),
   ),
   cardTheme: CardThemeData(
     color: EasyVorratColors.surface,
     elevation: 0,
-    margin: const EdgeInsets.symmetric(
-      horizontal: 10,
-      vertical: 5,
-    ),
+    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(6),
-      side: const BorderSide(
-        color: EasyVorratColors.border,
-      ),
+      side: const BorderSide(color: EasyVorratColors.border),
     ),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: EasyVorratColors.surface,
       foregroundColor: EasyVorratColors.green,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 14,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: const BorderSide(
-          color: EasyVorratColors.greenDim,
-        ),
+        side: const BorderSide(color: EasyVorratColors.greenDim),
       ),
     ),
   ),
@@ -102,30 +82,17 @@ final ThemeData easyVorratTheme = ThemeData(
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
     fillColor: EasyVorratColors.surfaceDark,
-    labelStyle: const TextStyle(
-      color: EasyVorratColors.textSecondary,
-    ),
+    labelStyle: const TextStyle(color: EasyVorratColors.textSecondary),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(
-        color: EasyVorratColors.border,
-      ),
+      borderSide: const BorderSide(color: EasyVorratColors.border),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(
-        color: EasyVorratColors.green,
-        width: 1.5,
-      ),
+      borderSide: const BorderSide(color: EasyVorratColors.green, width: 1.5),
     ),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-    ),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
   ),
-  dividerTheme: const DividerThemeData(
-    color: EasyVorratColors.border,
-  ),
-  iconTheme: const IconThemeData(
-    color: EasyVorratColors.green,
-  ),
+  dividerTheme: const DividerThemeData(color: EasyVorratColors.border),
+  iconTheme: const IconThemeData(color: EasyVorratColors.green),
 );

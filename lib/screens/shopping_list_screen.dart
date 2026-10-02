@@ -1,3 +1,5 @@
+import '../widgets/inventory_limit_dialog.dart';
+import '../services/plus_service.dart';
 import 'package:flutter/material.dart';
 
 import '../models/inventory_item.dart';
@@ -87,7 +89,13 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
     if (!mounted || item == null) return;
 
-    await DatabaseHelper.instance.insertItem(item);
+    try {
+      await DatabaseHelper.instance.insertItem(item);
+    } on InventoryLimitException {
+      if (!mounted) return;
+      await showEasyVorratPlusDialog(context);
+      return;
+    }
 
     if (!mounted) return;
 
@@ -95,6 +103,9 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   Future<void> _markPurchased(InventoryItem item) async {
+    if (PlusService.isShoppingOnly(item)) {
+      if (!await ensureInventorySlot(context) || !mounted) return;
+    }
     final controller = TextEditingController(text: item.shoppingQuantity);
 
     final result = await showDialog<String>(
@@ -150,10 +161,16 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       return;
     }
 
-    await DatabaseHelper.instance.markItemAsPurchased(
-      item,
-      purchasedAmount: purchasedAmount,
-    );
+    try {
+      await DatabaseHelper.instance.markItemAsPurchased(
+        item,
+        purchasedAmount: purchasedAmount,
+      );
+    } on InventoryLimitException {
+      if (!mounted) return;
+      await showEasyVorratPlusDialog(context);
+      return;
+    }
 
     if (!mounted) return;
 

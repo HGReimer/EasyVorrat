@@ -1,3 +1,6 @@
+import 'package:sqflite/sqflite.dart' as limit_sql;
+import 'plus_service.dart';
+
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -216,13 +219,31 @@ class DatabaseHelper {
     };
   }
 
+  Future<void> _assertInventorySlot(limit_sql.DatabaseExecutor executor) async {
+    await PlusService.instance.initialize();
+    if (PlusService.instance.isPlus) return;
+
+    final rows = await executor.rawQuery(PlusService.inventoryCountSql);
+    final total = (rows.first['total'] as num).toInt();
+
+    if (total >= PlusService.freeItemLimit) {
+      throw const InventoryLimitException();
+    }
+  }
+
   Future<int> insertItem(InventoryItem item) async {
     final db = await database;
     final itemToInsert = item.autoShoppingList && item.hasReachedMinimum
         ? item.copyWith(isOnShoppingList: true)
         : item;
     final map = itemToInsert.toMap()..remove('id');
-    return db.insert('items', map);
+
+    return db.transaction((transaction) async {
+      if (!PlusService.isShoppingOnly(itemToInsert)) {
+        await _assertInventorySlot(transaction);
+      }
+      return transaction.insert('items', map);
+    });
   }
 
   Future<List<InventoryItem>> getAllInventoryItems() async {
@@ -386,6 +407,9 @@ class DatabaseHelper {
 
       final targetMap = movedItem.toMap()..remove('id');
 
+      if (!PlusService.isShoppingOnly(movedItem)) {
+        await _assertInventorySlot(transaction);
+      }
       await transaction.insert('items', targetMap);
     });
   }
@@ -394,23 +418,49 @@ class DatabaseHelper {
     InventoryItem item, {
     required double purchasedAmount,
   }) async {
-    final current = item.quantityValue ?? 0;
-
-    if (purchasedAmount <= 0) {
+    if (!purchasedAmount.isFinite || purchasedAmount <= 0) {
       throw ArgumentError(
         'Die tatsächlich gekaufte Menge muss größer als 0 sein.',
       );
     }
+    if (item.id == null) {
+      throw StateError('Der Artikel ist nicht gespeichert.');
+    }
 
-    final newQuantity = current + purchasedAmount;
+    final db = await database;
+    await db.transaction((transaction) async {
+      final rows = await transaction.query(
+        'items',
+        where: 'id = ?',
+        whereArgs: [item.id],
+      );
+      if (rows.isEmpty) {
+        throw StateError('Der Artikel ist nicht mehr vorhanden.');
+      }
 
-    await updateItem(
-      item.copyWith(
+      final currentItem = InventoryItem.fromMap(rows.first);
+      if (PlusService.isShoppingOnly(currentItem)) {
+        await _assertInventorySlot(transaction);
+      }
+
+      final newQuantity = (currentItem.quantityValue ?? 0) + purchasedAmount;
+      final purchasedItem = currentItem.copyWith(
         quantity: _formatQuantity(newQuantity),
-        location: item.defaultLocation,
+        location: currentItem.defaultLocation,
         isOnShoppingList: false,
-      ),
-    );
+      );
+      final itemToStore =
+          purchasedItem.autoShoppingList && purchasedItem.hasReachedMinimum
+          ? purchasedItem.copyWith(isOnShoppingList: true)
+          : purchasedItem;
+
+      await transaction.update(
+        'items',
+        itemToStore.toMap(),
+        where: 'id = ?',
+        whereArgs: [currentItem.id],
+      );
+    });
   }
 
   String _formatQuantity(double value) {

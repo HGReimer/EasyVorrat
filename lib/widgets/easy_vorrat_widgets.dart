@@ -21,9 +21,7 @@ class EasyVorratPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: EasyVorratColors.surface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: borderColor ?? EasyVorratColors.border,
-        ),
+        border: Border.all(color: borderColor ?? EasyVorratColors.border),
       ),
       child: child,
     );
@@ -34,11 +32,7 @@ class EasyVorratSectionHeader extends StatelessWidget {
   final String title;
   final IconData? icon;
 
-  const EasyVorratSectionHeader({
-    super.key,
-    required this.title,
-    this.icon,
-  });
+  const EasyVorratSectionHeader({super.key, required this.title, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -47,45 +41,31 @@ class EasyVorratSectionHeader extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
-            Icon(
-              icon,
-              size: 20,
-              color: EasyVorratColors.green,
-            ),
+            Icon(icon, size: 20, color: EasyVorratColors.green),
             const SizedBox(width: 8),
           ],
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: EasyVorratColors.green,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: EasyVorratColors.green,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(width: 10),
-          const Expanded(
-            child: Divider(),
-          ),
+          const Expanded(child: Divider()),
         ],
       ),
     );
   }
 }
 
-enum ExpiryStatus {
-  ok,
-  warning,
-  expired,
-}
+enum ExpiryStatus { ok, warning, expired }
 
 class ExpiryStatusChip extends StatelessWidget {
   final ExpiryStatus status;
   final String text;
 
-  const ExpiryStatusChip({
-    super.key,
-    required this.status,
-    required this.text,
-  });
+  const ExpiryStatusChip({super.key, required this.status, required this.text});
 
   Color get color {
     switch (status) {
@@ -101,16 +81,11 @@ class ExpiryStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: color,
-        ),
+        border: Border.all(color: color),
       ),
       child: Text(
         text,

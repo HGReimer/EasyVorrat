@@ -1,3 +1,5 @@
+import '../widgets/inventory_limit_dialog.dart';
+import '../services/plus_service.dart';
 import 'package:flutter/material.dart';
 
 import '../models/inventory_item.dart';
@@ -37,6 +39,8 @@ class _LocationScreenState extends State<LocationScreen> {
   }
 
   Future<void> _openAddItemScreen() async {
+    if (!await ensureInventorySlot(context) || !mounted) return;
+
     final item = await Navigator.push<InventoryItem>(
       context,
       MaterialPageRoute(
@@ -46,7 +50,13 @@ class _LocationScreenState extends State<LocationScreen> {
 
     if (!mounted || item == null) return;
 
-    await DatabaseHelper.instance.insertItem(item);
+    try {
+      await DatabaseHelper.instance.insertItem(item);
+    } on InventoryLimitException {
+      if (!mounted) return;
+      await showEasyVorratPlusDialog(context);
+      return;
+    }
     await _loadItems();
   }
 
@@ -299,11 +309,17 @@ class _LocationScreenState extends State<LocationScreen> {
 
     if (!mounted || result == null) return;
 
-    await DatabaseHelper.instance.moveItem(
-      item: item,
-      newLocation: result.location,
-      amount: result.amount,
-    );
+    try {
+      await DatabaseHelper.instance.moveItem(
+        item: item,
+        newLocation: result.location,
+        amount: result.amount,
+      );
+    } on InventoryLimitException {
+      if (!mounted) return;
+      await showEasyVorratPlusDialog(context);
+      return;
+    }
 
     if (!mounted) return;
 

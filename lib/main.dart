@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'screens/home_screen.dart';
 import 'services/db_init.dart';
+import 'services/plus_service.dart';
 import 'theme/easy_vorrat_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   initDatabaseFactory();
+  await PlusService.instance.initialize();
   runApp(const EasyVorratApp());
 }
 
